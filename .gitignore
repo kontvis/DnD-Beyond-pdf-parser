@@ -30,3 +30,6 @@ pnpm-lock.yaml
 
 # Ignore input pdf files
 input_pdfs/
+
+# Ignore output json files
+output_json/

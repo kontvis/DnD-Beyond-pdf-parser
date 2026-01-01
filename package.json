@@ -9,6 +9,7 @@
 	"type": "module",
 	"scripts": {
 		"start": "node .",
+		"parse:folder": "node ./scripts/parse_folder.js",
 		"build": "docker build --tag ben855/$npm_package_name:$npm_package_version .",
 		"watch": "node-dev . --notify=false",
 		"lint:fix": "eslint src --fix",
