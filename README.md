@@ -6,8 +6,15 @@ Small Node.js service that downloads D&D Beyond character PDFs, parses them with
 
 Quick start
 
+First time setup:
+
 ```bash
-yarn install
+./setup.sh
+```
+
+Then run the server:
+
+```bash
 yarn start    # runs node . (listens on port 8080)
 # or for live reload:
 yarn watch
@@ -21,13 +28,23 @@ yarn build    # runs docker build using the repo dockerfile
 
 API
 
-- GET `/rolls?characterId=<id>`
-  - Downloads `https://www.dndbeyond.com/sheet-pdfs/<id>.pdf`, parses it, and returns JSON.
-  - Error codes: missing `characterId` → 400, fetch failure → 400, parse failure → 500.
+- GET `/rolls?characterId=<id>&source=<source>`
+  - `characterId` (required): Character ID for lookup.
+  - `source` (optional, default `download`): Where to fetch the PDF from.
+    - `download`: Fetch from `https://www.dndbeyond.com/sheet-pdfs/<id>.pdf`.
+    - `local`: Load from `input_pdfs/<id>.pdf` (for manually downloaded PDFs).
+  - Error codes: missing `characterId` → 400, PDF not found (local) → 400, fetch failure (download) → 400, parse failure → 500.
 
 Example
 
 ```bash
+# Download from D&D Beyond:
+curl "http://localhost:8080/rolls?characterId=123456&source=download"
+
+# Parse local PDF (from input_pdfs/):
+curl "http://localhost:8080/rolls?characterId=123456&source=local"
+
+# Default is download (same as above):
 curl "http://localhost:8080/rolls?characterId=123456"
 ```
 

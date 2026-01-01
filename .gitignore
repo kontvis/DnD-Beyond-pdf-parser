@@ -27,3 +27,6 @@ pnpm-lock.yaml
 
 # Kube config
 *kubeconfig.yaml
+
+# Ignore input pdf files
+input_pdfs/
