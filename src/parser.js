@@ -26,6 +26,32 @@ export function parsePdfBuffer(buffer) {
     pdfParser.on('pdfParser_dataReady', pdfData => {
       try {
         const characterName = findValue(pdfData.Pages[0], 'CharacterName');
+        const classLevel = findValue(pdfData.Pages[0], 'CLASS_LEVEL');
+        const race = findValue(pdfData.Pages[0], 'RACE');
+        const background = findValue(pdfData.Pages[0], 'BACKGROUND');
+        const ac = parseInt(findValue(pdfData.Pages[0], 'AC')) || 0;
+        const maxHP = parseInt(findValue(pdfData.Pages[0], 'MaxHP')) || 0;
+        const profBonus = parseInt(findValue(pdfData.Pages[0], 'ProfBonus')) || 0;
+        const initiative = parseInt(findValue(pdfData.Pages[0], 'Init')) || 0;
+        const passivePerception = parseInt(findValue(pdfData.Pages[0], 'Passive1')) || 0;
+        const passiveInsight = parseInt(findValue(pdfData.Pages[0], 'Passive2')) || 0;
+        const passiveInvestigation = parseInt(findValue(pdfData.Pages[0], 'Passive3')) || 0;
+
+        // Appearance & personality (from page 4 - typically index 3)
+        const appearancePage = pdfData.Pages[3] || pdfData.Pages[0];
+        const gender = findValue(appearancePage, 'GENDER') || null;
+        const age = findValue(appearancePage, 'AGE') || null;
+        const height = findValue(appearancePage, 'HEIGHT') || null;
+        const weight = findValue(appearancePage, 'WEIGHT') || null;
+        const alignment = findValue(appearancePage, 'ALIGNMENT') || null;
+        const faith = findValue(appearancePage, 'FAITH') || null;
+        const skin = findValue(appearancePage, 'SKIN') || null;
+        const eyes = findValue(appearancePage, 'EYES') || null;
+        const hair = findValue(appearancePage, 'HAIR') || null;
+        const personalityTraits = findValue(appearancePage, 'PersonalityTraits_') || null;
+        const ideals = findValue(appearancePage, 'Ideals') || null;
+        const bonds = findValue(appearancePage, 'Bonds') || null;
+        const flaws = findValue(appearancePage, 'Flaws') || null;
 
         const weaponNames = pdfData.Pages[0].Fields
           .filter(field => /Wpn_Name(_[1-6])?/.test(field.id.Id))
@@ -94,7 +120,40 @@ export function parsePdfBuffer(buffer) {
           ['ST_Charisma', 'Charisma Save']
         ]);
 
-        resolve({ characterName, attacks, abilityChecks, attributes, saves });
+        resolve({
+          characterName,
+          classLevel,
+          race,
+          background,
+          ac,
+          maxHP,
+          profBonus,
+          initiative,
+          passivePerception,
+          passiveInsight,
+          passiveInvestigation,
+          appearance: {
+            gender,
+            age,
+            height,
+            weight,
+            alignment,
+            faith,
+            skin,
+            eyes,
+            hair
+          },
+          traits: {
+            personalityTraits,
+            ideals,
+            bonds,
+            flaws
+          },
+          attacks,
+          abilityChecks,
+          attributes,
+          saves
+        });
       } catch (err) {
         reject(err);
       }
