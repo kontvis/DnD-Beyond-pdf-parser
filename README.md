@@ -66,6 +66,23 @@ Development notes
 - Linting: `yarn lint` / `yarn lint:fix` (ESLint configured for `src`). See [package.json](DnD-Beyond-pdf-parser/package.json#L1-L200).
 - Keep parsing logic small and colocated with the handlers; if it grows, add a new module under `src/` and import it from `index.js`.
 
+Batch parsing (local files)
+
+- Use the bundled script to parse all PDFs in `input_pdfs/` and write JSON outputs to `output_json/`.
+- Command:
+
+```bash
+yarn parse:folder
+```
+
+- Output files are written as `output_json/<pdf-basename>.json` (same basename as each PDF).
+- Example quick checks:
+
+```bash
+ls -la output_json/
+cat "output_json/Big Lou - Character Sheet v1.json" | jq .
+```
+
 Dependencies
 
 - Runtime: `axios`, `express`, `pdf2json` (declared in [package.json](DnD-Beyond-pdf-parser/package.json#L1-L200)).
