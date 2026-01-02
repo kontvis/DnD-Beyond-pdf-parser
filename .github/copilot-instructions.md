@@ -2,8 +2,8 @@
 
 This repository is a small Node.js service that fetches D&D Beyond character PDFs, parses them with `pdf2json`, and exposes extracted rolls via an Express endpoint. Keep guidance terse and strictly tied to code patterns found in this repo.
 
-- **Entrypoint:** [DnD-Beyond-pdf-parser/src/index.js](DnD-Beyond-pdf-parser/src/index.js#L1-L400) — service is ESM (`type: module`), listens on port 8080.
-- **How to run (local):** use `yarn start` or `node .` from the repository root. For live reload use `yarn watch` (uses `node-dev`). See [package.json](DnD-Beyond-pdf-parser/package.json#L1-L200).
+- **Entrypoint:** [src/index.js](../src/index.js) — service is ESM (`type: module`), listens on port 8080.
+- **How to run (local):** use `yarn start` or `node .` from the repository root. For live reload use `yarn watch` (uses `node-dev`). See [package.json](../package.json).
 - **Build:** `yarn build` runs the Docker build defined in `package.json` (tags the image using the package name/version). The repo contains a `dockerfile` at the project root.
 - **Linting:** `yarn lint` and `yarn lint:fix` run ESLint on `src`.
 
@@ -16,8 +16,12 @@ Key code patterns and data shapes (use these as authoritative references):
 
 API surface:
 
-- GET `/rolls?characterId=<id>` — downloads `https://www.dndbeyond.com/sheet-pdfs/<id>.pdf`, parses it, and responds with JSON: `{ characterName, attacks, abilityChecks, attributes, saves }` (see `resolve({ characterName, attacks, abilityChecks, attributes, saves })`).
-- Error behavior: missing `characterId` → 400, failed fetch → 400, parse error → 500 with error text. Follow existing status codes when adding endpoints.
+- GET `/rolls?characterId=<id>&source=<source>`
+  - `characterId` (required): Character ID.
+  - `source` (optional, default `download`): `download` fetches from D&D Beyond; `local` reads from `input_pdfs/<id>.pdf`.
+  - Response: JSON with `{ characterName, attacks, abilityChecks, attributes, saves }`.
+  - Error codes: missing `characterId` → 400, PDF not found (local) → 400, fetch failure (download) → 400, parse error → 500 with error text.
+  - **Local folder parsing:** Added in v1.2.0 — uses `fs.readFileSync()` to load from `input_pdfs/` when `source=local` is set. See [src/index.js](../src/index.js).
 
 Conventions specific to this project:
 
