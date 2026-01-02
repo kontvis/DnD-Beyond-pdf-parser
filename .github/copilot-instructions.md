@@ -19,7 +19,7 @@ API surface:
 - GET `/rolls?characterId=<id>&source=<source>`
   - `characterId` (required): Character ID.
   - `source` (optional, default `download`): `download` fetches from D&D Beyond; `local` reads from `input_pdfs/<id>.pdf`.
-  - Response: JSON with `{ characterName, attacks, abilityChecks, attributes, saves }`.
+  - Response: JSON with character sheet data including name, class/level, race, background, AC, HP, proficiency bonus, initiative, passive skill checks, attacks, ability scores, and saving throws.
   - Error codes: missing `characterId` → 400, PDF not found (local) → 400, fetch failure (download) → 400, parse error → 500 with error text.
   - **Local folder parsing:** Added in v1.2.0 — uses `fs.readFileSync()` to load from `input_pdfs/` when `source=local` is set. See [src/index.js](../src/index.js).
 

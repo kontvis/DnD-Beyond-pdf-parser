@@ -52,11 +52,38 @@ Example response shape
 
 ```json
 {
-  "characterName": "Alice",
-  "attacks": [{ "name": "Shortsword", "roll": 5, "damage": "1d6" }],
-  "abilityChecks": [{ "name": "Initiative", "roll": 3 }],
-  "attributes": [{ "name": "Strength", "roll": 12 }],
-  "saves": [{ "name": "Dexterity Save", "roll": 2 }]
+  "characterName": "Big Lou",
+  "classLevel": "Fighter 4",
+  "race": "Goliath",
+  "background": "Guard",
+  "ac": 12,
+  "maxHP": 40,
+  "profBonus": 2,
+  "initiative": 2,
+  "passivePerception": 13,
+  "passiveInsight": 13,
+  "passiveInvestigation": 12,
+  "appearance": {
+    "gender": "Male",
+    "age": "29",
+    "height": "7'6\"",
+    "weight": "410",
+    "alignment": "Lawful Neutral",
+    "faith": "Code of the Street",
+    "skin": "Grey w/ blue tattoos",
+    "eyes": "Ice Blue",
+    "hair": "Bald"
+  },
+  "traits": {
+    "personalityTraits": "Wisecracker: Lou's humor is legendary...",
+    "ideals": "Protection: Believes his strength and smarts...",
+    "bonds": "Petra Foxglove: His boss, confidant...",
+    "flaws": "Overprotective: Sometimes steps in too soon..."
+  },
+  "attacks": [{ "name": "Unarmed Strike", "roll": 6, "damage": "1d6+4" }],
+  "abilityChecks": [{ "name": "Initiative", "roll": 2 }],
+  "attributes": [{ "name": "Strength", "roll": 19 }],
+  "saves": [{ "name": "Strength Save", "roll": 6 }]
 }
 ```
 
