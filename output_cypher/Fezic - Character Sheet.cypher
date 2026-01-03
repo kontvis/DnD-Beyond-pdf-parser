@@ -40,25 +40,63 @@ CREATE (char)-[:HAS_TRAITS]->(traits)
 WITH char
 
 // Create Attribute nodes
-UNWIND [{"name":"Strength","roll":9},{"name":"Dexterity","roll":18},{"name":"Constitution","roll":14},{"name":"Intelligence","roll":10},{"name":"Wisdom","roll":18},{"name":"Charisma","roll":8}] AS attr
+UNWIND [
+  {name:"Strength", roll:9},
+  {name:"Dexterity", roll:18},
+  {name:"Constitution", roll:14},
+  {name:"Intelligence", roll:10},
+  {name:"Wisdom", roll:18},
+  {name:"Charisma", roll:8}
+] AS attr
 CREATE (attribute:Attribute {name: attr.name, value: attr.roll})
 CREATE (char)-[:HAS_ATTRIBUTE]->(attribute)
 WITH char
 
 // Create AbilityCheck nodes
-UNWIND [{"name":"Initiative","roll":6},{"name":"Acrobatics","roll":4},{"name":"Animal Handling","roll":8},{"name":"Arcana","roll":0},{"name":"Athletics","roll":1},{"name":"Deception","roll":-1},{"name":"History","roll":0},{"name":"Insight","roll":6},{"name":"Intimidation","roll":-1},{"name":"Investigation","roll":0},{"name":"Medicine","roll":4},{"name":"Nature","roll":0},{"name":"Perception","roll":4},{"name":"Performance","roll":-1},{"name":"Persuasion","roll":1},{"name":"Religion","roll":0},{"name":"Sleight of Hand","roll":4},{"name":"Stealth","roll":4},{"name":"Survival","roll":6}] AS check
+UNWIND [
+  {name:"Initiative", roll:6},
+  {name:"Acrobatics", roll:4},
+  {name:"Animal Handling", roll:8},
+  {name:"Arcana", roll:0},
+  {name:"Athletics", roll:1},
+  {name:"Deception", roll:-1},
+  {name:"History", roll:0},
+  {name:"Insight", roll:6},
+  {name:"Intimidation", roll:-1},
+  {name:"Investigation", roll:0},
+  {name:"Medicine", roll:4},
+  {name:"Nature", roll:0},
+  {name:"Perception", roll:4},
+  {name:"Performance", roll:-1},
+  {name:"Persuasion", roll:1},
+  {name:"Religion", roll:0},
+  {name:"Sleight of Hand", roll:4},
+  {name:"Stealth", roll:4},
+  {name:"Survival", roll:6}
+] AS check
 CREATE (abilityCheck:AbilityCheck {name: check.name, bonus: check.roll})
 CREATE (char)-[:HAS_ABILITY_CHECK]->(abilityCheck)
 WITH char
 
 // Create Save nodes
-UNWIND [{"name":"Strength Save","roll":1},{"name":"Dexterity Save","roll":6},{"name":"Constitution Save","roll":2},{"name":"Intelligence Save","roll":0},{"name":"Wisdom Save","roll":4},{"name":"Charisma Save","roll":-1}] AS save
+UNWIND [
+  {name:"Strength Save", roll:1},
+  {name:"Dexterity Save", roll:6},
+  {name:"Constitution Save", roll:2},
+  {name:"Intelligence Save", roll:0},
+  {name:"Wisdom Save", roll:4},
+  {name:"Charisma Save", roll:-1}
+] AS save
 CREATE (savingThrow:Save {name: save.name, bonus: save.roll})
 CREATE (char)-[:HAS_SAVE]->(savingThrow)
 WITH char
 
 // Create Attack nodes
-UNWIND [{"name":"Unarmed Strike","roll":1},{"name":"Enhanced Unarmed Strike","roll":1,"damage":"1d4-1"},{"name":"Spell Attack","roll":6}] AS attack
+UNWIND [
+  {name:"Unarmed Strike", roll:1},
+  {name:"Enhanced Unarmed Strike", roll:1, damage:"1d4-1"},
+  {name:"Spell Attack", roll:6}
+] AS attack
 CREATE (attackNode:Attack {name: attack.name, toHit: attack.roll, damage: attack.damage})
 CREATE (char)-[:HAS_ATTACK]->(attackNode)
 

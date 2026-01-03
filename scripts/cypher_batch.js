@@ -17,6 +17,20 @@ function escapeCypherString(str) {
   return '"' + String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + '"';
 }
 
+function formatUnwindArray(items) {
+  if (!items || items.length === 0) return '[]';
+  const formatted = items.map(item => {
+    const pairs = Object.entries(item)
+      .map(([k, v]) => {
+        const val = typeof v === 'string' ? escapeCypherString(v) : v;
+        return `${k}:${val}`;
+      })
+      .join(', ');
+    return `{${pairs}}`;
+  }).join(',\n  ');
+  return `[\n  ${formatted}\n]`;
+}
+
 function generateCharacterCypher(character) {
   const {
     characterName,
@@ -82,25 +96,25 @@ function generateCharacterCypher(character) {
   cypher += `WITH char\n\n`;
 
   cypher += `// Create Attribute nodes\n`;
-  cypher += `UNWIND ${JSON.stringify(attributes)} AS attr\n`;
+  cypher += `UNWIND ${formatUnwindArray(attributes)} AS attr\n`;
   cypher += `CREATE (attribute:Attribute {name: attr.name, value: attr.roll})\n`;
   cypher += `CREATE (char)-[:HAS_ATTRIBUTE]->(attribute)\n`;
   cypher += `WITH char\n\n`;
 
   cypher += `// Create AbilityCheck nodes\n`;
-  cypher += `UNWIND ${JSON.stringify(abilityChecks)} AS check\n`;
+  cypher += `UNWIND ${formatUnwindArray(abilityChecks)} AS check\n`;
   cypher += `CREATE (abilityCheck:AbilityCheck {name: check.name, bonus: check.roll})\n`;
   cypher += `CREATE (char)-[:HAS_ABILITY_CHECK]->(abilityCheck)\n`;
   cypher += `WITH char\n\n`;
 
   cypher += `// Create Save nodes\n`;
-  cypher += `UNWIND ${JSON.stringify(saves)} AS save\n`;
+  cypher += `UNWIND ${formatUnwindArray(saves)} AS save\n`;
   cypher += `CREATE (savingThrow:Save {name: save.name, bonus: save.roll})\n`;
   cypher += `CREATE (char)-[:HAS_SAVE]->(savingThrow)\n`;
   cypher += `WITH char\n\n`;
 
   cypher += `// Create Attack nodes\n`;
-  cypher += `UNWIND ${JSON.stringify(attacks)} AS attack\n`;
+  cypher += `UNWIND ${formatUnwindArray(attacks)} AS attack\n`;
   cypher += `CREATE (attackNode:Attack {name: attack.name, toHit: attack.roll, damage: attack.damage})\n`;
   cypher += `CREATE (char)-[:HAS_ATTACK]->(attackNode)\n\n`;
 
