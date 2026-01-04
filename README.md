@@ -1,6 +1,8 @@
 # dnd-beyond-pdf-parser
 
-Small Node.js service that downloads D&D Beyond character PDFs, parses them with `pdf2json`, and exposes extracted rolls and stats via a simple HTTP API.
+This project transforms a collection of Dungeons & Dragons characters—originally created and managed in D&D Beyond—into a richly connected graph database. Each character includes detailed attributes, abilities, relationships, factions, and narrative ties, all of which are modeled as nodes and relationships in Neo4j. The goal is to visualize the entire cast as an interconnected network, making it easy to explore how characters relate to one another, uncover hidden patterns, and support worldbuilding through a dynamic, queryable graph structure. This approach turns traditional character sheets into a living data model that grows alongside the story.
+
+Small Node.js service that downloads D&D Beyond character PDFs, parses them with `pdf2json`, and exposes extracted rolls and stats via a simple HTTP API.  Then converts the JSON to Cypher for insertion in a Graph DB. 
 
 **Entrypoint:** [DnD-Beyond-pdf-parser/src/index.js](DnD-Beyond-pdf-parser/src/index.js#L1-L400)
 
