@@ -2,6 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import PDFParser from 'pdf2json';
+import { extractFeaturesFromPdfData } from '../src/parser.js';
 
 async function main() {
   const filePath = process.argv[2] || 'input_pdfs/Big Lou - Character Sheet v1.pdf';
@@ -11,6 +12,7 @@ async function main() {
     process.exit(1);
   }
 
+  const dumpFeatures = process.argv.includes('--dump-features');
   const buffer = fs.readFileSync(filePath);
   const pdfParser = new PDFParser();
 
@@ -57,6 +59,16 @@ async function main() {
         const text = page.Texts?.map(t => t.R[0]?.T).filter(Boolean).join(' ') || '';
         console.log(`Page ${idx + 1}: ${text.substring(0, 100)}...`);
       });
+    }
+
+    if (dumpFeatures) {
+      try {
+        const features = extractFeaturesFromPdfData(pdfData);
+        console.log('\n\n=== Extracted Features ===\n');
+        console.log(JSON.stringify(features, null, 2));
+      } catch (err) {
+        console.error('Failed to extract features:', err.message || err);
+      }
     }
   });
 
