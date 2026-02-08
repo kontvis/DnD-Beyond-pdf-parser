@@ -33,3 +33,4 @@ input_pdfs/
 
 # Ignore output json files
 output_json/
+output_cypher/

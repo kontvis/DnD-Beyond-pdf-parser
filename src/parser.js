@@ -4,6 +4,25 @@ function findValue(page, id) {
   return page.Fields.find(field => field.id.Id === id)?.V;
 }
 
+function findValueInPages(pages, idVariants) {
+  if (!pages || !Array.isArray(pages)) return null;
+  const variants = Array.isArray(idVariants) ? idVariants : [idVariants];
+  for (const page of pages) {
+    if (!page.Fields) continue;
+    for (const field of page.Fields) {
+      const fid = (field.id && field.id.Id) ? String(field.id.Id).toLowerCase() : '';
+      for (const v of variants) {
+        const vi = String(v).toLowerCase();
+        if (!vi) continue;
+        if (fid === vi || fid.includes(vi) || fid.startsWith(vi) || fid.endsWith(vi)) {
+          if (field.V !== undefined && field.V !== null && String(field.V).trim() !== '') return field.V;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function getValueList(page, ids) {
   const out = [];
   ids.forEach(([id, name]) => {
@@ -16,6 +35,131 @@ function getValueList(page, ids) {
 
 function findPage(pages, text) {
   return pages.find(page => page.Texts.map(element => element.R[0]?.T).includes(text));
+}
+
+function decodeText(t) {
+  try {
+    return decodeURIComponent(String(t));
+  } catch (e) {
+    return String(t);
+  }
+}
+
+// Extract the FEATURES & TRAITS box content from pdfData.Pages (generic across sheets)
+export function extractFeaturesFromPdfData(pdfData) {
+  const pages = pdfData.Pages || [];
+
+  // helper: find pages with feature-like fields or text (handle percent-encoding)
+  function findFeaturesPages() {
+    const matches = [];
+    for (const page of pages) {
+      const rawTexts = (page.Texts || []).map(t => String(t.R[0]?.T || ''));
+      const decoded = rawTexts.map(tt => {
+        try { return decodeURIComponent(tt); } catch (e) { return tt; }
+      });
+      const combined = rawTexts.concat(decoded).map(s => String(s).replace(/%20/g, ' ').replace(/%26/g, '&'));
+      if (combined.some(tt => /FEATURES\s*&\s*TRAITS/i.test(tt) || /ADDITIONAL\s+FEATURES/i.test(tt))) matches.push(page);
+      else if ((page.Fields || []).some(f => /Actions\d*|Actions|Features|Traits|Personality|PersonalityTraits_/i.test(String(f.id.Id)))) matches.push(page);
+    }
+    return matches;
+  }
+
+  const matchedPages = findFeaturesPages();
+  if (!matchedPages.length) return null;
+
+  // Try to collect column text from dedicated fields (e.g., Actions1, Actions2, Actions3) across matched pages
+  const featureFieldPattern = /^(Actions|Actions\d+|Features|Traits|Personality|PersonalityTraits_)/i;
+  const featureFields = matchedPages.flatMap(p => (p.Fields || []).filter(f => featureFieldPattern.test(String(f.id.Id))).map(f => ({ page: p, field: f })));
+
+  let columns = [];
+  if (featureFields.length) {
+    // map any numbered suffix to order; fallback to original order
+    const mapped = featureFields.map(ff => {
+      const fid = ff.field && ff.field.id ? String(ff.field.id.Id) : String(ff.id || '');
+      const m = fid.match(/(\d+)/);
+      const idx = m ? parseInt(m[1], 10) : 0;
+      return { id: fid, idx, text: ff.field && ff.field.V ? ff.field.V : '' };
+    });
+    mapped.sort((a, b) => a.idx - b.idx);
+    columns = mapped.map(m => String(m.text || '').replace(/\r/g, '\n'));
+  }
+
+  // Fallback: cluster Texts by x into 3 columns
+  if (!columns.length) {
+    // gather texts from all matched pages
+    const texts = matchedPages.flatMap(p => (p.Texts || []).map(t => ({
+      x: t.x ?? t.X ?? 0,
+      y: t.y ?? t.Y ?? 0,
+      text: decodeText(t.R[0]?.T || '')
+    }))).filter(t => t.text && t.text.trim());
+
+    if (!texts.length) return null;
+
+    const xs = texts.map(t => t.x).sort((a, b) => a - b);
+    const minX = xs[0];
+    const maxX = xs[xs.length - 1];
+    const span = Math.max(1, maxX - minX);
+    const buckets = [[], [], []];
+    texts.forEach(t => {
+      const b = Math.min(2, Math.floor(((t.x - minX) / span) * 3));
+      buckets[b].push(t);
+    });
+    columns = buckets.map(b => b.sort((a, b) => a.y - b.y).map(i => i.text).join('\n'));
+  }
+
+  // Column-major reading: top->bottom per column, left->right
+  const readText = columns.map(c => String(c || '').trim()).filter(Boolean).join('\n\n');
+
+  // Parse into headings and entries
+  const lines = readText.split(/\r?\n/).map(l => l.trim()).filter((l, i, arr) => !(l === '' && (arr[i-1] === '' || arr[i+1] === '')));
+
+  const features = {};
+  let currentHeading = 'FEATURES';
+  let currentEntry = null;
+
+  function pushEntry() {
+    if (!currentEntry) return;
+    const { heading, key, lines } = currentEntry;
+    if (!features[heading]) features[heading] = {};
+    features[heading][key] = { text: lines.join('\n').trim() };
+    currentEntry = null;
+  }
+
+  const headingRegex = /^=+\s*([A-Z0-9'’\s-]+)\s*=+$/;
+  const subEffectRegex = /^\s*[•\*-]\s*(.+)$/;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const h = line.match(headingRegex);
+    if (h) {
+      // new heading
+      pushEntry();
+      currentHeading = h[1].trim();
+      continue;
+    }
+
+    // detect entry start: a line that begins with '*' or contains '• PHB-'
+    const isEntryStart = line.startsWith('*') || /•\s*PHB-/i.test(line) || (/^[A-Z][A-Za-z0-9'’\s,():-]{3,60}$/.test(line) && line === line.toUpperCase());
+    if (isEntryStart) {
+      pushEntry();
+      // normalize key: strip leading '*' and trailing punctuation
+      let key = line.replace(/^\*\s*/, '').trim();
+      currentEntry = { heading: currentHeading, key, lines: [] };
+      continue;
+    }
+
+    // continuation or sub-effect
+    if (!currentEntry) {
+      // treat as headingless preamble
+      currentEntry = { heading: currentHeading, key: 'SUMMARY', lines: [] };
+    }
+
+    // treat all lines as part of current entry text (sub-effect parsing can be added later)
+    currentEntry.lines.push(line);
+  }
+  pushEntry();
+
+  return features;
 }
 
 export function parsePdfBuffer(buffer) {
@@ -37,21 +181,22 @@ export function parsePdfBuffer(buffer) {
         const passiveInsight = parseInt(findValue(pdfData.Pages[0], 'Passive2')) || 0;
         const passiveInvestigation = parseInt(findValue(pdfData.Pages[0], 'Passive3')) || 0;
 
-        // Appearance & personality (from page 4 - typically index 3)
-        const appearancePage = pdfData.Pages[3] || pdfData.Pages[0];
-        const gender = findValue(appearancePage, 'GENDER') || null;
-        const age = findValue(appearancePage, 'AGE') || null;
-        const height = findValue(appearancePage, 'HEIGHT') || null;
-        const weight = findValue(appearancePage, 'WEIGHT') || null;
-        const alignment = findValue(appearancePage, 'ALIGNMENT') || null;
-        const faith = findValue(appearancePage, 'FAITH') || null;
-        const skin = findValue(appearancePage, 'SKIN') || null;
-        const eyes = findValue(appearancePage, 'EYES') || null;
-        const hair = findValue(appearancePage, 'HAIR') || null;
-        const personalityTraits = findValue(appearancePage, 'PersonalityTraits_') || null;
-        const ideals = findValue(appearancePage, 'Ideals') || null;
-        const bonds = findValue(appearancePage, 'Bonds') || null;
-        const flaws = findValue(appearancePage, 'Flaws') || null;
+        // Appearance & personality: search across pages with resilient id matching
+        const pages = pdfData.Pages || [];
+        const gender = findValueInPages(pages, ['GENDER', 'Gender', 'SEX']) || null;
+        const age = findValueInPages(pages, ['AGE', 'Age']) || null;
+        const height = findValueInPages(pages, ['HEIGHT', 'Ht', 'Height']) || null;
+        const weight = findValueInPages(pages, ['WEIGHT', 'Wt', 'Weight']) || null;
+        const alignment = findValueInPages(pages, ['ALIGNMENT', 'Alignment']) || null;
+        const faith = findValueInPages(pages, ['FAITH', 'Faith', 'Religion']) || null;
+        const skin = findValueInPages(pages, ['SKIN', 'Skin']) || null;
+        const eyes = findValueInPages(pages, ['EYES', 'Eyes']) || null;
+        const hair = findValueInPages(pages, ['HAIR', 'Hair']) || null;
+        const personalityTraits = findValueInPages(pages, ['PersonalityTraits_', 'PersonalityTraits', 'Personality_Traits', 'Personality']) || null;
+        const ideals = findValueInPages(pages, ['Ideals', 'Ideal']) || null;
+        const bonds = findValueInPages(pages, ['Bonds', 'Bond']) || null;
+        const flaws = findValueInPages(pages, ['Flaws', 'Flaw']) || null;
+        const alliesAndOrganizations = findValueInPages(pages, ['Allies', 'AlliesAndOrganizations', 'Allies_Organizations', 'Allies & Organizations', 'AlliesOrganizations']) || null;
 
         const weaponNames = pdfData.Pages[0].Fields
           .filter(field => /Wpn_Name(_[1-6])?/.test(field.id.Id))
@@ -149,7 +294,9 @@ export function parsePdfBuffer(buffer) {
             bonds,
             flaws
           },
+          alliesAndOrganizations,
           attacks,
+          features: extractFeaturesFromPdfData(pdfData) || {},
           abilityChecks,
           attributes,
           saves
