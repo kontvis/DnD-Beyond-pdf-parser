@@ -235,6 +235,36 @@ export function extractEquipmentFromPdfData(pdfData) {
   return Object.keys(result).length > 0 ? result : null;
 }
 
+// Extract backstory from page 5 (index 4)
+export function extractBackstoryFromPdfData(pdfData) {
+  const pages = pdfData.Pages || [];
+  if (pages.length < 5) return null;
+
+  const page = pages[4]; // page 5 is index 4
+  if (!page || !page.Fields) return null;
+
+  // Look for backstory field - try common field IDs
+  for (const field of page.Fields) {
+    const fid = field.id && field.id.Id ? String(field.id.Id) : '';
+    if (/^[Bb]ackstory/.test(fid) || fid === 'Backstory') {
+      const value = field.V;
+      if (value && String(value).trim()) {
+        return { Backstory: String(value).trim() };
+      }
+    }
+  }
+
+  // Fallback: look for large text blocks that start with common backstory phrases
+  for (const field of page.Fields) {
+    const value = field.V;
+    if (value && /^[A-Z]/.test(value) && String(value).length > 300 && /Noble|History|Born|Grew|Raised|Story/i.test(String(value).substring(0, 100))) {
+      return { Backstory: String(value).trim() };
+    }
+  }
+
+  return null;
+}
+
 export function parsePdfBuffer(buffer) {
   return new Promise((resolve, reject) => {
     const pdfParser = new PDFParser();
@@ -371,6 +401,7 @@ export function parsePdfBuffer(buffer) {
           attacks,
           features: extractFeaturesFromPdfData(pdfData) || {},
           equipment: extractEquipmentFromPdfData(pdfData) || {},
+          backstory: extractBackstoryFromPdfData(pdfData) || {},
           abilityChecks,
           attributes,
           saves
