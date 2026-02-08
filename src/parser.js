@@ -162,6 +162,79 @@ export function extractFeaturesFromPdfData(pdfData) {
   return features;
 }
 
+// Extract money and equipment data from pdfData.Pages
+export function extractEquipmentFromPdfData(pdfData) {
+  const pages = pdfData.Pages || [];
+  if (!pages.length) return null;
+
+  // Helper to find field by exact or fuzzy match
+  function findFieldValue(pages, idPatterns) {
+    const patterns = Array.isArray(idPatterns) ? idPatterns : [idPatterns];
+    for (const page of pages) {
+      if (!page.Fields) continue;
+      for (const field of page.Fields) {
+        const fid = field.id && field.id.Id ? String(field.id.Id) : '';
+        for (const pat of patterns) {
+          if (fid === pat) { // exact match first
+            if (field.V !== undefined && field.V !== null) return field.V;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  const result = {};
+
+  // Extract money (coins) - exact field IDs on pages[1]
+  const cp = findFieldValue(pages, ['CP']);
+  const sp = findFieldValue(pages, ['SP']);
+  const ep = findFieldValue(pages, ['EP']);
+  const gp = findFieldValue(pages, ['GP']);
+  const pp = findFieldValue(pages, ['PP']);
+
+  if (cp !== null || sp !== null || ep !== null || gp !== null || pp !== null) {
+    result.money = {
+      CP: cp !== null ? parseInt(cp) || 0 : 0,
+      SP: sp !== null ? parseInt(sp) || 0 : 0,
+      EP: ep !== null ? parseInt(ep) || 0 : 0,
+      GP: gp !== null ? parseInt(gp) || 0 : 0,
+      PP: pp !== null ? parseInt(pp) || 0 : 0
+    };
+  }
+
+  // Extract carrying capacity
+  const weightCarried = findFieldValue(pages, ['Weight_Carried']);
+
+  if (weightCarried !== null) {
+    result.carryingCapacity = {
+      weightCarried: String(weightCarried).trim()
+    };
+  }
+
+  // Extract equipment list from Eq_NameN, Eq_QtyN, Eq_WeightN fields (N = 0 to 25)
+  const equipment = [];
+  for (let i = 0; i <= 25; i++) {
+    const name = findFieldValue(pages, [`Eq_Name${i}`]);
+    const qty = findFieldValue(pages, [`Eq_Qty${i}`]);
+    const weight = findFieldValue(pages, [`Eq_Weight${i}`]);
+
+    if (name !== null && String(name).trim()) {
+      equipment.push({
+        name: String(name).trim(),
+        quantity: qty !== null ? String(qty).trim() : '1',
+        weight: weight !== null ? String(weight).trim() : undefined
+      });
+    }
+  }
+
+  if (equipment.length > 0) {
+    result.equipment = equipment;
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
 export function parsePdfBuffer(buffer) {
   return new Promise((resolve, reject) => {
     const pdfParser = new PDFParser();
@@ -297,6 +370,7 @@ export function parsePdfBuffer(buffer) {
           alliesAndOrganizations,
           attacks,
           features: extractFeaturesFromPdfData(pdfData) || {},
+          equipment: extractEquipmentFromPdfData(pdfData) || {},
           abilityChecks,
           attributes,
           saves
